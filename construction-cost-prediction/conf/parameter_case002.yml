@@ -1,0 +1,34 @@
+train_csv: ../data/train_dataset_82ddf14911a54c729380209510ae25ac/train_tabular-add-features.csv
+eval_csv: ../data/evaluation_dataset_88c8c1d9376e4d9b8034f77ca19939b0/evaluation_tabular_no_target-add-features.csv
+
+seed: 42
+n_splits: 3
+
+# 追加で除外する列。不要なら null
+extra_drop_cols: null
+# 例:
+# extra_drop_cols:
+#   - B1_mean
+#   - NDVI_mean
+
+lgb_params:
+  objective: regression
+  metric: rmse
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  min_child_samples: 10
+  verbose: -1
+  seed: 42
+
+cb_params:
+  iterations: 1000
+  learning_rate: 0.05
+  depth: 6
+  loss_function: RMSE
+  eval_metric: RMSE
+  random_seed: 42
+  verbose: 200
+  early_stopping_rounds: 50

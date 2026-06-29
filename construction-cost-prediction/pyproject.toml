@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools >= 61"]
+
+[project]
+name = "construction-cost-prediction"
+version = "0.1.0"
+description = ''
+readme = "README.md"
+requires-python = ">=3.13"
+license = {file = "LICENSE"}
+keywords = []
+authors = []
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "catboost>=1.2.10",
+    "ipykernel>=7.2.0",
+    "jupyter",
+    "lightgbm>=4.6.0",
+    "matplotlib>=3.10.8",
+    "opencv-python>=4.13.0.92",
+    "pandas>=3.0.1",
+    "pillow>=12.1.1",
+    "pytest>=9.0.2",
+    "rasterio>=1.5.0",
+    "scikit-image>=0.26.0",
+    "scikit-learn>=1.8.0",
+    "seaborn>=0.13.2",
+    "tqdm>=4.67.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pandas-stubs",
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.mypy]
+check_untyped_defs = true
+explicit_package_bases = true
+mypy_path = ["src"]
+namespace_packages = true
+packages = ["pi_nk_otaki"]
+pretty = true
+show_traceback = true
+strict = true
+warn_unreachable = true
+disable_error_code = ["call-overload"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+lint.select = [
+    "A",
+    "ARG",
+    "B",
+    "C",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "FBT",
+    "I",
+    "ICN",
+    "ISC",
+    "N",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "Q",
+    "RUF",
+    "S",
+    "T",
+    "TID",
+    "UP",
+    "W",
+    "YTT",
+]
+lint.ignore = [
+    # Allow non-abstract empty methods in abstract base classes
+    "B027",
+    # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "FBT003",
+    # Ignore checks for possible passwords
+    "S105", "S106", "S107",
+    # Ignore complexity
+    "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+    # Ignore checks for self equality
+    "PLR0124",
+    # Dash character in data different for input credits, so omit
+    "RUF001",
+    # Allow ambiguous unicode characters (Japanese text in docstrings)
+    "RUF002",
+    # Ignore unbinded loop variables
+    "B023",
+    # Allow uppercase variable names for domain-specific conventions (vegetation indices)
+    "N806",
+    # Allow XML parsing with stdlib (local trusted files only)
+    "S314",
+    # Allow boolean positional arguments in function definitions
+    "FBT001",
+    # Allow f-string in exception messages for readability
+    "EM102",
+    # Allow magic values in numeric computations
+    "PLR2004",
+    # Allow CamelCase imported as acronym
+    "N817"
+]
+lint.unfixable = [
+    # Don't touch unused imports
+    "F401",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.isort]
+known-first-party = ["pi_nk_otaki"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"**/tests/**/*" = ["PLR2004", "S101", "TID252"]

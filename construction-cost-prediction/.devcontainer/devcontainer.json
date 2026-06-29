@@ -1,0 +1,40 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    "name": "Python 3",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": ".."
+    },
+    "features": {
+      "ghcr.io/devcontainers/features/aws-cli:1": {}
+    },
+    "runArgs": [
+      "--net=host"
+    ],
+    "mounts": [
+        // Mount the .ssh folder from the local machine to the container to be able to access github
+        "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind"
+    ],
+    "shutdownAction": "none",
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "make",
+    // Configure tool-specific properties.
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "charliermarsh.ruff",
+          "donjayamanne.githistory",
+          "esbenp.prettier-vscode",
+          "ionutvmi.path-autocomplete",
+          "kedro.kedro",
+          "mechatroner.rainbow-csv",
+          "ms-azuretools.vscode-docker",
+          "ms-python.python",
+          "ms-python.vscode-pylance",
+          "ms-toolsai.jupyter",
+          "ms-toolsai.jupyter-keymap"
+        ]
+      }
+    }
+  }

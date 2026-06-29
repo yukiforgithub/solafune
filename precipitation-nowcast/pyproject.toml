@@ -1,0 +1,32 @@
+[project]
+name = "precipitation-nowcast"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "catboost>=1.2.10",
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "lightgbm>=4.6.0",
+    "matplotlib>=3.11.0",
+    "opencv-python>=4.13.0.92",
+    "pandas>=3.0.3",
+    "pillow>=12.2.0",
+    "pyarrow>=24.0.0",
+    "rasterio>=1.5.0",
+    "scikit-image>=0.26.0",
+    "scikit-learn>=1.9.0",
+    "seaborn>=0.13.2",
+    "torch>=2.2",
+    "tqdm>=4.68.3",
+]
+
+# PyTorch は CPU ビルドを使う（GPU なし環境。CUDA 同梱版は巨大で無駄なため）。
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

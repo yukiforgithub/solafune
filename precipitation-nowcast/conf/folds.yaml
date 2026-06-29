@@ -1,0 +1,47 @@
+# 正準 name_location → fold マップ（地域 GroupKFold, 5fold）
+#
+# 出典: docs/eda/sections/30_grid_and_cv.md §C-3「推奨5-fold割当」。
+# 衛星構成・行数・降水強度の3軸を手設計でバランスした割当であり、
+# seed 非依存・完全再現。src/precip/cv.py の make_location_group_kfold
+# （seed 依存のラウンドロビン）ではなく、この手設計マップを「正」とする。
+#
+# TRAIN 20地域すべてを被覆。各地域は単一衛星に対応。
+# EVAL 18地域とは完全 DISJOINT のため eval 地域は含まない。
+#
+# 達成バランス（§C-3 記載値, target_stats ベース）:
+#   fold0: 3地域 7,319行 平均RR0.356
+#   fold1: 4地域 7,235行 平均RR0.404
+#   fold2: 3地域 10,095行 平均RR0.117（france 7,167行が支配）
+#   fold3: 4地域 7,314行 平均RR0.310
+#   fold4: 6地域 8,723行 平均RR0.318
+
+scheme: location_group_handdesigned
+n_splits: 5
+source: docs/eda/sections/30_grid_and_cv.md §C-3
+
+location_to_fold:
+  # --- fold 0 ---
+  atlantic_coast: 0        # goes
+  aceh: 0                  # himawari
+  cape_town: 0             # meteosat
+  # --- fold 1 ---
+  ecuador: 1               # goes
+  hat_yai: 1               # himawari
+  guangdong: 1             # himawari
+  borno_state: 1           # meteosat
+  # --- fold 2 ---
+  florida: 2               # goes
+  bihar: 2                 # himawari
+  france: 2                # meteosat
+  # --- fold 3 ---
+  jamaica: 3               # goes
+  central_philippines: 3   # himawari
+  dhaka: 3                 # himawari
+  andalusia: 3             # meteosat
+  # --- fold 4 ---
+  bahia_blanca: 4          # goes
+  jakarta: 4               # himawari
+  central_vietnam: 4       # himawari
+  gaza_province: 4         # meteosat
+  friuli_venezia_giulia: 4 # meteosat
+  kinshasa: 4              # meteosat

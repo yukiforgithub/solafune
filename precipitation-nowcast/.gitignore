@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# データ・成果物（リポジトリには含めない）
+data/
+eda_cache/
+outputs/
+submissions/
+*.zip
+
+# OS
+.DS_Store

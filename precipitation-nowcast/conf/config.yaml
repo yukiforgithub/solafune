@@ -1,0 +1,107 @@
+# 降水ナウキャスト 設定ファイル
+# パスは src/precip/config.py の絶対パス定数を既定とし、ここでは
+# Phase 共通のパラメータと上書き可能な項目を管理する。
+#
+# 読み込みは各エントリスクリプト（src/*.py）の --config オプションから。
+# 値を省略した場合は src/precip/config.py の DEFAULT_* が使われる。
+
+# --- CV 設計 ---
+cv:
+  # "location_group" : 地域 group・衛星バランス（既定。未知地域汎化を測る）
+  # "random"         : 行単位ランダム（比較用・楽観的）
+  scheme: location_group
+  n_splits: 5
+  seed: 42
+
+# --- Phase0 ベースライン ---
+baseline:
+  # "zero"          : 全画素 0
+  # "global_mean"   : 全画素 = 訓練全体平均
+  # "location_mean" : 地域別平均（未知地域は global_mean フォールバック）
+  method: location_mean
+
+# --- 手法選択（Phase0 定数 / Phase1 物理） ---
+# train.py / predict.py はこの method を見て分岐する。
+#   "constant"    : Phase0 定数ベースライン（baseline.method を使う）
+#   "physical_ir" : Phase1 物理 IR モデル（window_lookup / 衛星別）。
+# 未指定（または "constant"）なら従来どおり定数ベースライン。
+method: physical_ir
+
+# --- Phase1 物理 IR モデル ---
+# IR 窓 Tb（DN）単独の Tb→RR lookup（window_lookup / per_satellite）。
+# 充足統計キャッシュから閉形式 fit / CV する。生データ再読込なし。
+physical_ir:
+  # 確定モデル成果物（衛星別 256bin lookup table）。train.py が読み/再fitして上書きする。
+  model_json: outputs/phase1_model.json
+  # 充足統計キャッシュ（窓 DN ヒストグラム）。train.py の再fit / CV に使う。
+  window_hist: eda_cache/phase1_window_hist.parquet
+  # CV fold は手設計マップ（conf/folds.yaml）を正準とする。
+  folds_yaml: conf/folds.yaml
+  # isotonic（DN 増 → RR 単調減）で条件付き平均 lookup を平滑化する。
+  isotonic: true
+  # 0 フレーム / 読込失敗 / 未知衛星のフォールバック気候値（mm/hr）。
+  global_mean_fallback: 0.2886
+  # EVAL 入力読込のスレッド数（rasterio I/O は GIL を解放）。
+  n_workers: 8
+
+# --- Phase2 GBDT（衛星別 LightGBM, 2部構成 / Tweedie） ---
+# train.py / predict.py は --method gbdt で分岐。preprocess_train.py --method gbdt が
+# 衛星別の画素特徴 parquet（outputs/phase2_features_{sat}.parquet）を作る。
+gbdt:
+  variant: both              # two_part | tweedie | both（both=両方CV算出し小さい方をpredict採用）
+  rain_threshold: 0.1        # 有雨の定義しきい値（mm/hr）。分類=P(y>=thr), 回帰=y>=thr で学習
+  pixel_sample_frac: 0.15    # 各行から一様抽出する画素割合（base rate 維持）
+  max_pixels: 2500000        # 衛星別の学習画素上限（temporal=0.70705 はこの2.5M）。preprocessの
+                             # del解放(衛星間でX/out~2GB破棄)を入れたのでこの値でもOOMしない。
+  global_mean_fallback: 0.2886  # 0フレーム/読込失敗/未学習衛星の予測フォールバック（mm/hr）
+  calibration: none          # 後処理較正: none（既定）。isotonic は fold-out で悪化と判明（地域非転移, 下記STATUS参照）。isotonic|none
+  ensemble: blend            # アンサンブル: blend（two_part×tweedie を per-sat OOF重みで結合, fold-outで改善時のみ採用）| none
+  seed: 42
+  tweedie_variance_power: 1.7   # HP探索で最適(1.3→1.5→1.7単調改善, 1.9で破綻)。baseline比CV-0.007。
+  n_workers: 4               # 特徴抽出の並列スレッド数。8→4: 大きい衛星(goes141²/meteosat144²)で
+                             # 各行3フレーム×8並列読込がRAM7.7GBを超えOOMしたため半減（抽出ピーク減）。
+                             # max_pixels(2.5M)は不変＝学習データ量・temporalとの比較は公平。
+  lgb_classifier:
+    n_estimators: 400
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 200
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    force_col_wise: true   # RAM 8GB級でのOOM回避（row-wiseより省メモリ）
+    max_bin: 127           # ヒストグラムのビン数を減らしメモリ削減（精度ほぼ不変）
+  lgb_regressor:           # HP探索(R1/R2)で確定した reg_strong（訓練地域への過適合を抑え地域汎化↑）
+    n_estimators: 600
+    learning_rate: 0.05
+    num_leaves: 31         # 63→31（木を浅く＝単純化）
+    min_child_samples: 500 # 200→500（小集団への過適合抑制）
+    subsample: 0.7         # 0.8→0.7
+    subsample_freq: 1
+    colsample_bytree: 0.6  # 0.8→0.6
+    reg_lambda: 5.0        # L2 追加
+    reg_alpha: 1.0         # L1 追加
+    force_col_wise: true
+    max_bin: 127
+
+# --- Phase3 CNN（衛星別 小型FCN, CPU学習） ---
+# preprocess_train.py --method cnn が衛星別の入力テンソル memmap（outputs/phase3_cnn/）を作る。
+# train.py --method cnn が学習し outputs/phase3_models/{sat}.pt を保存、predict.py --method cnn が提出生成。
+cnn:
+  cv_mode: holdout           # holdout（fold0検証で高速に競争力を見る）| full（5fold OOF+全データ最終fit）
+  holdout_fold: 0            # holdout 時の検証 fold
+  epochs: 20                 # 固定エポック（OOF のリーク防止のため早期終了はしない）
+  batch_size: 128            # CPU スループット重視（大きめが効率的, メモリは余裕）
+  lr: 0.001
+  weight_decay: 0.0001
+  num_threads: 8             # torch の CPU スレッド数
+  n_workers: 8               # 前処理/予測の特徴抽出スレッド数
+  log_every: 5               # 何エポックごとに val を表示するか
+  seed: 42
+  global_mean_fallback: 0.2886  # 0フレーム/読込失敗/未学習衛星の予測フォールバック（mm/hr）
+
+# --- 後処理（将来 Phase で使用。Phase0 では参照のみ） ---
+postprocess:
+  clip_negative_to_zero: true   # 予測の負値を 0 にクリップ
+  zero_round_threshold: 0.0     # この値未満の正予測を 0 に丸める（CV で最適化予定）
+  clip_max: null                # 強雨の物理上限クリップ（null = 無効）
